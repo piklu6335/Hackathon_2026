@@ -13,14 +13,6 @@
     if (message?.type === "NEWSCRED_GET_ARTICLE") sendResponse(articleData());
   });
 
-  // Scan once per URL after the page settles. The extension service worker caches the result.
-  let timer;
-  const send = () => {
-    chrome.runtime.sendMessage({
-      type: "NEWSCRED_ANALYZE",
-      article: articleData()
-    });
-  };
-  timer = setTimeout(send, 1800);
-  window.addEventListener("pagehide", () => clearTimeout(timer), { once: true });
+  // Extract the article only when the user opens the popup. Avoids an
+  // unrequested background scan and duplicate model inference on popup open.
 })();

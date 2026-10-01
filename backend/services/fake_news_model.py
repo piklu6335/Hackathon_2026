@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 import torch
 import torch.nn as nn
 from transformers import AutoModel, BertTokenizerFast
+
+# The hosted instance has one CPU core; avoid PyTorch oversubscribing it.
+torch.set_num_threads(max(1, int(os.getenv("TORCH_NUM_THREADS", "2"))))
 
 
 # ============================================================
@@ -23,13 +27,14 @@ MODEL_PATH = (
 )
 
 
-# Your training code used:
-# Fake = 1
-# True = 0
+# The WELFake dataset's published label convention is 0 = fake, 1 = real.
+# Keep the class IDs, displayed labels, and probability fields aligned with it.
+# (The training/preprocessing script is not in this repository, so verify this
+# convention if the model checkpoint was trained with remapped labels.)
 
 LABEL_MAP = {
-    0: "REAL",
-    1: "FAKE",
+    0: "FAKE",
+    1: "REAL",
 }
 
 
@@ -207,7 +212,7 @@ def predict_fake_news(
     # Inference
     # --------------------------------------------------------
 
-    with torch.no_grad():
+    with torch.inference_mode():
 
         output = model(
             input_ids,
@@ -230,11 +235,11 @@ def predict_fake_news(
     )
 
     fake_probability = float(
-        probabilities[1].item()
+        probabilities[0].item()
     )
 
     real_probability = float(
-        probabilities[0].item()
+        probabilities[1].item()
     )
 
     confidence = float(

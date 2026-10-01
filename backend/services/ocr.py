@@ -104,12 +104,7 @@ def extract_text_from_image(image_bytes: bytes) -> dict[str, Any]:
     )
     gray = ImageEnhance.Sharpness(sharpened).enhance(1.2)
     thresholded = gray.point(lambda pixel: 255 if pixel >= 170 else 0)
-    variants = [
-        image,
-        gray.convert("RGB"),
-        ImageOps.invert(gray).convert("RGB"),
-        thresholded.convert("RGB"),
-    ]
+    variants = [image, gray.convert("RGB")]
 
     def parse_result(result: Any) -> list[dict[str, Any]]:
         lines = []
@@ -138,6 +133,13 @@ def extract_text_from_image(image_bytes: bytes) -> dict[str, Any]:
 
     candidate_lines = [parse_result(ocr_engine(np.array(variant))) for variant in variants]
     lines = max(candidate_lines, key=quality)
+    # Invert/threshold are slower OCR passes; reserve them for hard images.
+    if quality(lines) < 0.70:
+        candidate_lines.extend([
+            parse_result(ocr_engine(np.array(ImageOps.invert(gray).convert("RGB")))),
+            parse_result(ocr_engine(np.array(thresholded.convert("RGB")))),
+        ])
+        lines = max(candidate_lines, key=quality)
     selected_engine = "RapidOCR"
 
     # RapidOCR's bundled default recognizer is not specialized for Indic
@@ -145,32 +147,43 @@ def extract_text_from_image(image_bytes: bytes) -> dict[str, Any]:
     # EasyOCR's Bengali and Devanagari networks are incompatible, so try each
     # in turn and keep only one network resident in memory.
     enhanced_array = np.array(enhanced)
-    has_bengali = False
+    # Reuse the last-selected model first. That keeps repeated Hindi scans from
+    # unloading/reloading Hindi and Bengali networks on every request.
+    first_group = "hi" if _easyocr_language == "hi+en" else "bn"
+    group_options = {
+        "bn": (["bn", "en"], 0x0980, 0x09FF, "EasyOCR (Bengali + English)"),
+        "hi": (["hi", "en"], 0x0900, 0x097F, "EasyOCR (Hindi + English)"),
+    }
+    groups_to_try = [first_group]
     try:
-        easy_lines = _run_easyocr(enhanced_array, ["bn", "en"])
-        easy_text = " ".join(item["text"] for item in easy_lines)
-        has_bengali = contains_script(easy_text, 0x0980, 0x09FF)
-        if has_bengali or quality(easy_lines) > quality(lines):
-            lines = easy_lines
-            selected_engine = "EasyOCR (Bengali + English)"
+        first_lines = _run_easyocr(enhanced_array, group_options[first_group][0])
+        first_text = " ".join(item["text"] for item in first_lines)
+        first_script_found = contains_script(
+            first_text, group_options[first_group][1], group_options[first_group][2]
+        )
+        if first_script_found or quality(first_lines) > quality(lines):
+            lines = first_lines
+            selected_engine = group_options[first_group][3]
+        if not first_script_found and quality(first_lines) < 0.70:
+            groups_to_try.append("hi" if first_group == "bn" else "bn")
     except Exception as exc:
-        # A missing Bengali model should not prevent trying Hindi below.
-        print(f"[NewsCred] Bengali EasyOCR unavailable: {exc}")
+        # If the selected model cannot load, try the other Indic language too.
+        print(f"[NewsCred] EasyOCR {first_group} model unavailable: {exc}")
+        groups_to_try.append("hi" if first_group == "bn" else "bn")
 
-    # If Bengali text wasn't found, inspect with the compatible Hindi model.
-    # Script evidence wins over confidence, which is not comparable between
-    # OCR model families.
-    if not has_bengali:
+    # Only load the alternate network when the first one couldn't find its
+    # script and produced weak text. Explicit script evidence always wins.
+    for group in groups_to_try[1:]:
         try:
-            hindi_lines = _run_easyocr(enhanced_array, ["hi", "en"])
-            hindi_text = " ".join(item["text"] for item in hindi_lines)
-            has_hindi = contains_script(hindi_text, 0x0900, 0x097F)
-            if has_hindi or quality(hindi_lines) > quality(lines):
-                lines = hindi_lines
-                selected_engine = "EasyOCR (Hindi + English)"
+            languages, script_start, script_end, engine_name = group_options[group]
+            alternate_lines = _run_easyocr(enhanced_array, languages)
+            alternate_text = " ".join(item["text"] for item in alternate_lines)
+            has_script = contains_script(alternate_text, script_start, script_end)
+            if has_script or quality(alternate_lines) > quality(lines):
+                lines = alternate_lines
+                selected_engine = engine_name
         except Exception as exc:
-            # Keep whichever local OCR result is available; don't fail analysis.
-            print(f"[NewsCred] Hindi EasyOCR unavailable: {exc}")
+            print(f"[NewsCred] EasyOCR {group} model unavailable: {exc}")
 
     # -----------------------------
     # Combine lines

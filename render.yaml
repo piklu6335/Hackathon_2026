@@ -5,7 +5,7 @@ services:
     plan: 1c-2g
     region: singapore
     buildCommand: pip install --no-cache-dir -r backend/requirements.txt && python -m playwright install --with-deps chromium --only-shell
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
@@ -24,6 +24,8 @@ services:
         value: /var/data/argos-packages
       - key: EASYOCR_MODULE_PATH
         value: /var/data/easyocr
+      - key: TORCH_NUM_THREADS
+        value: "1"
     disk:
       name: argos-models
       mountPath: /var/data

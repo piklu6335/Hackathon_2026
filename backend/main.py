@@ -21,11 +21,11 @@ from dotenv import load_dotenv
 
 from pydantic import BaseModel, HttpUrl
 
-from backend.services.scraper import scrape_article
-from backend.services.ocr import extract_text_from_image
-from backend.services.fake_news_model import predict_fake_news
-from backend.services.clickbait_model import predict_clickbait
-from backend.services.translation import LanguagePairUnavailable, translate_article
+from services.scraper import scrape_article
+from services.ocr import extract_text_from_image
+from services.fake_news_model import predict_fake_news
+from services.clickbait_model import predict_clickbait
+from services.translation import LanguagePairUnavailable, translate_article
 
 
 # ============================================================
@@ -229,8 +229,10 @@ def analyze_content(
 
     try:
 
+        # Clickbait4 truncates input to 128 tokens. Keep the prefix bounded so
+        # huge scraped pages aren't needlessly tokenized before truncation.
         clickbait = predict_clickbait(
-            clickbait_text or text
+            (clickbait_text or text)[:1200]
         )
 
     except Exception as exc:
@@ -844,10 +846,16 @@ def analyze_extension_article(request: ExtensionAnalyzeRequest):
     if len(text) > 100_000:
         raise HTTPException(status_code=413, detail="Article text exceeds the 100 KB limit.")
 
-    # The WELFake model was trained on headlines. Use the article title when
-    # available; retain the extracted body for the clickbait model and UI.
+    # Both classifiers are headline-oriented. The clickbait model was trained
+    # to estimate headline strength, so feeding it the entire article (including
+    # disclaimers and explanatory body text) can dilute the score substantially.
     credibility_input = request.title.strip() or text[:500]
-    credibility = analyze_content(credibility_input)
+    clickbait_input = request.title.strip() or text[:500]
+    credibility = analyze_content(
+        text,
+        credibility_text=credibility_input,
+        clickbait_text=clickbait_input,
+    )
     return {
         "success": True,
         "scan": {"source": "browser_extension", "url": str(request.url), "domain": request.domain},

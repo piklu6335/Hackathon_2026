@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Analyze the credibility signals of the news article you're reading.",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost:8000/*", "https://*.onrender.com/*"],
+  "host_permissions": ["http://localhost:8000/*", "http://127.0.0.1:8000/*", "https://*.onrender.com/*"],
   "action": {
     "default_title": "NewsCred analysis",
     "default_popup": "popup.html"
