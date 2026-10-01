@@ -126,8 +126,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const credibility = analysis.credibility || {};
     const clickbait = analysis.clickbait || {};
     const ocr = data.ocr || {};
+    if (analysis.status === "error" || credibility.status === "error") {
+      const message = credibility.error || clickbait.error || analysis.error || "The hosted analysis service is unavailable.";
+      return `<div class="glass-panel"><h2 class="mb-8">Analysis unavailable</h2><p class="analysis-notice">${escapeHTML(message)}</p></div>`;
+    }
     if (["low_ocr_confidence", "translation_unavailable"].includes(analysis.status)) {
-      const confidence = Number.isFinite(Number(ocr.average_confidence))
+      const confidence = ocr.average_confidence != null && Number.isFinite(Number(ocr.average_confidence))
         ? `OCR confidence: ${Math.round(Number(ocr.average_confidence) * 100)}%. `
         : "";
       return `<div class="glass-panel"><h2 class="mb-8">Text analysis unavailable</h2><p style="padding:12px 14px;border-left:3px solid var(--color-blue);border-radius:6px;background:rgba(59,130,246,.08);color:var(--text-secondary)">${escapeHTML(confidence + (analysis.warning || "The text could not be analyzed reliably."))}</p>${ocr.text ? `<h3>Recognized text</h3><div class="ocr-result">${escapeHTML(ocr.text)}</div>` : ""}</div>`;
@@ -153,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="flex-col gap-2">
             <div class="status-badge ${statusClass}">${prediction.toUpperCase()}</div>
-            <div style="color: var(--text-secondary); margin-top: 8px;">Model: WELFake</div>
+            <div style="color: var(--text-secondary); margin-top: 8px;">Model: ${escapeHTML(credibility.model?.name || "NewsCred AI")}</div>
             <div style="color: var(--text-secondary);">Confidence: ${conf}</div>
           </div>
         </div>
@@ -161,8 +165,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const detectedText = ocr.text || data.detected_text;
     if (detectedText) {
-      const ocrConfidence = ocr.average_confidence || data.ocr_confidence;
-      let ocrConf = ocrConfidence ? Math.round(ocrConfidence * 100) + "%" : "";
+      const ocrConfidence = ocr.average_confidence ?? data.ocr_confidence;
+      let ocrConf = ocrConfidence != null ? Math.round(ocrConfidence * 100) + "%" : "";
       html += `
         <h3 style="margin-top: 32px; margin-bottom: 8px;">OCR Analysis ${ocrConf ? '('+ocrConf+')' : ''}</h3>
         <div class="ocr-result">${escapeHTML(detectedText)}</div>

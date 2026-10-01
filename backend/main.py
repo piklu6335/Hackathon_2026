@@ -25,6 +25,9 @@ from services.scraper import scrape_article
 from services.ocr import extract_text_from_image
 from services.fake_news_model import predict_fake_news
 from services.clickbait_model import predict_clickbait
+from services.cloudflare_ai import assess_news
+from services.fake_news_model import format_fake_news_result
+from services.clickbait_model import format_clickbait_result
 from services.translation import LanguagePairUnavailable, translate_article
 
 
@@ -36,8 +39,7 @@ app = FastAPI(
     title="NewsCred API",
     version="0.4.0",
     description=(
-        "NewsCred - Article scraping, OCR and "
-        "WELFake-based fake news analysis."
+        "NewsCred - Article scraping, hosted OCR and AI news-pattern estimates."
     ),
 )
 
@@ -215,49 +217,33 @@ def analyze_content(
             "clickbait": None,
         }
 
-    # --------------------------------------------------------
-    # WELFake / Fake-News Analysis
-    # --------------------------------------------------------
-
+    # One hosted-model call returns both estimates to reduce latency and quota use.
+    headline = (credibility_text or clickbait_text or text)[:800]
     try:
-
-        credibility = predict_fake_news(
-            credibility_text or text
+        assessment = assess_news(headline, text[:6000])
+        credibility = format_fake_news_result(
+            credibility_text or text,
+            assessment["label"],
+            assessment["confidence"],
         )
-
-    except Exception as exc:
-
-        credibility = {
-            "status": "error",
-            "error": str(exc),
-        }
-
-    # --------------------------------------------------------
-    # Clickbait Analysis
-    # --------------------------------------------------------
-
-    try:
-
-        # Clickbait4 truncates input to 128 tokens. Keep the prefix bounded so
-        # huge scraped pages aren't needlessly tokenized before truncation.
-        clickbait = predict_clickbait(
-            (clickbait_text or text)[:1200]
+        credibility["assessment_reason"] = assessment["reason"]
+        clickbait = format_clickbait_result(
+            headline,
+            assessment["clickbait_score"],
         )
-
     except Exception as exc:
-
-        clickbait = {
-            "status": "error",
-            "error": str(exc),
-        }
+        credibility = {"status": "error", "error": str(exc)}
+        clickbait = {"status": "error", "error": str(exc)}
 
     # --------------------------------------------------------
     # Combined Result
     # --------------------------------------------------------
 
     return {
-
-        "status": "completed",
+        "status": "error" if credibility.get("status") == "error" else "completed",
+        "warning": (
+            "These are uncalibrated AI pattern estimates, not source checking or proof a story is true or false."
+        ),
 
         "credibility": credibility,
 
@@ -468,19 +454,30 @@ def run_ocr(
 def analyze_ocr_content(ocr_result: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None, str]:
     """Translate non-English OCR to English before running English news models."""
     original_text = (ocr_result.get("text") or "").strip()
-    average_ocr_confidence = float(ocr_result.get("average_confidence") or 0)
+    raw_ocr_confidence = ocr_result.get("average_confidence")
+    average_ocr_confidence = (
+        float(raw_ocr_confidence) if raw_ocr_confidence is not None else None
+    )
+    hosted_vision = str(ocr_result.get("engine", "")).startswith("Cloudflare Vision")
     confidence_threshold = 0.55 if str(ocr_result.get("engine", "")).startswith("EasyOCR") else 0.70
-    if average_ocr_confidence < confidence_threshold:
+    insufficient_ocr = (
+        len(original_text) < 20
+        if hosted_vision
+        else average_ocr_confidence is None or average_ocr_confidence < confidence_threshold
+    )
+    if insufficient_ocr:
+        low_quality_message = (
+            "The image did not produce enough readable text for analysis. Try a clearer image or crop closer to the text."
+            if hosted_vision
+            else f"OCR confidence is low ({(average_ocr_confidence or 0):.0%}), so AI scores were skipped. Try a sharper image, crop closer to the text, or use a larger image."
+        )
         return (
             {
                 "status": "low_ocr_confidence",
                 "credibility": None,
                 "clickbait": None,
                 "analysis_language": None,
-                "warning": (
-                    f"OCR confidence is low ({average_ocr_confidence:.0%}), so AI scores were skipped. "
-                    "Try a sharper image, crop closer to the text, or use a larger image."
-                ),
+                "warning": low_quality_message,
             },
             None,
             "und",
@@ -525,7 +522,7 @@ def analyze_ocr_content(ocr_result: dict[str, Any]) -> tuple[dict[str, Any], dic
     headline_lines = [
         str(line.get("text", "")).strip()
         for line in ocr_result.get("lines", [])
-        if float(line.get("confidence", 0)) >= 0.45 and str(line.get("text", "")).strip()
+        if float(line.get("confidence") or 0) >= 0.45 and str(line.get("text", "")).strip()
     ]
     headline_candidate = " ".join(headline_lines[:4])[:300]
     if detected_language != "en" and translation:
@@ -537,11 +534,15 @@ def analyze_ocr_content(ocr_result: dict[str, Any]) -> tuple[dict[str, Any], dic
         clickbait_text=analysis_text,
     )
     warnings = [
-        "AI scores are estimates, not verification. The credibility model was trained mainly on short English news headlines."
+        "These are uncalibrated AI pattern estimates, not source checking or proof a story is true or false."
     ]
-    if average_ocr_confidence < 0.60:
+    if average_ocr_confidence is not None and average_ocr_confidence < 0.60:
         warnings.append(
             f"OCR confidence is low ({average_ocr_confidence:.0%}); check the recognized text before relying on the scores."
+        )
+    if hosted_vision:
+        warnings.append(
+            "Hosted OCR does not provide word-level confidence. Review the recognized text; AI scores are uncalibrated pattern estimates, not fact verification."
         )
     analysis.update({
         "input_language": detected_language,
