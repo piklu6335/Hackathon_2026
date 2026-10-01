@@ -23,7 +23,9 @@ Load the `extension` directory as an unpacked extension in Chrome or Edge. It sc
 
 The schema is ready for account sessions and analysis history, but authentication, database writes, and history endpoints are not yet implemented. Account pages currently remain presentation-only. HTTPS is managed by Render on its public service domains.
 
-## Google Cloud Translation
+## Local translation models
 
-The Analyze page can translate extracted article/OCR text into the listed languages. Enable Cloud Translation - Basic (v2) in your Google Cloud project, create an API key restricted to that API, and set `GOOGLE_TRANSLATE_API_KEY` in Render's environment settings. For local development, put the same variable in the ignored `backend/.env` file. The key stays on the backend; translation requests are capped at 5,000 characters and Google may bill usage according to the project's Cloud Translation pricing.
+NewsCred translates extracted article/OCR text in the FastAPI backend using the Argos Translate Python module, which is the open-source engine used by LibreTranslate. It does not call a translation API and needs no API key. The backend detects the source language, downloads only the required model pair (or an English pivot pair) on first use, then runs translation locally. Translation requests are capped at 5,000 characters.
+
+Models are stored in Argos's local package directory. Render mounts a 5 GB persistent disk for those model files, so downloaded models survive redeploys. The disk adds about $1.25/month at Render's current $0.25/GB rate; there is no separate translation service or API charge. Argos Translate is open-source and supports local Python translation: https://github.com/argosopentech/argos-translate/.
 #

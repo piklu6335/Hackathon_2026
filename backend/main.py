@@ -16,7 +16,6 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from html import unescape
 from dotenv import load_dotenv
 
 from pydantic import BaseModel, HttpUrl
@@ -25,6 +24,7 @@ from backend.services.scraper import scrape_article
 from backend.services.ocr import extract_text_from_image
 from backend.services.fake_news_model import predict_fake_news
 from backend.services.clickbait_model import predict_clickbait
+from backend.services.translation import LanguagePairUnavailable, translate_article
 
 
 # ============================================================
@@ -110,14 +110,14 @@ def root():
             "article_scraping",
             "local_ocr",
             "fake_news_analysis",
-            "google_cloud_translation",
+            "argos_translate",
         ],
     }
 
 
 @app.post("/api/translate")
 def translate_text(request: TranslateRequest):
-    """Translate a short article excerpt through Google Cloud Translation v2."""
+    """Translate article text locally through the Argos Translate module."""
     text = request.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Text to translate is required.")
@@ -129,34 +129,22 @@ def translate_text(request: TranslateRequest):
     if request.target_language not in TRANSLATION_LANGUAGES:
         raise HTTPException(status_code=422, detail="Choose a supported target language.")
 
-    api_key = os.getenv("GOOGLE_TRANSLATE_API_KEY")
-    if not api_key:
+    try:
+        translated_text, detected_source_language = translate_article(
+            text, request.target_language
+        )
+    except LanguagePairUnavailable as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
         raise HTTPException(
             status_code=503,
-            detail="Translation is not configured. Set GOOGLE_TRANSLATE_API_KEY on the backend.",
-        )
-
-    try:
-        response = requests.post(
-            "https://translation.googleapis.com/language/translate/v2",
-            params={"key": api_key},
-            json={"q": text, "target": request.target_language, "format": "text"},
-            timeout=20,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        translation = payload["data"]["translations"][0]
-    except requests.Timeout as exc:
-        raise HTTPException(status_code=504, detail="Google Translation timed out.") from exc
-    except requests.RequestException as exc:
-        raise HTTPException(status_code=502, detail="Google Translation could not process the request.") from exc
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail="Google Translation returned an unexpected response.") from exc
+            detail="The local translation model could not be installed or loaded. Try again after checking Render logs.",
+        ) from exc
 
     return {
         "success": True,
-        "translated_text": unescape(translation.get("translatedText", "")),
-        "detected_source_language": translation.get("detectedSourceLanguage"),
+        "translated_text": translated_text,
+        "detected_source_language": detected_source_language,
         "target_language": request.target_language,
         "character_count": len(text),
     }

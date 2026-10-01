@@ -15,3 +15,5 @@ transformers
 tiktoken
 sentencepiece
 protobuf
+argostranslate
+langid
