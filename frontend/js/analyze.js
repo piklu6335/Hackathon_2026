@@ -28,7 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultContainer = document.getElementById("result-container");
   const translationTools = document.getElementById("translation-tools");
   const translateButton = document.getElementById("translate-button");
-  const translationLanguage = document.getElementById("translation-language");
   let currentSourceText = "";
   
   function resetAnalysis() {
@@ -48,7 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
       ""
     ).trim().slice(0, 5000);
     if (translationTools) {
-      translationTools.classList.toggle("hidden", !currentSourceText);
+      const isOcrResult = data.analysis?.input_type === "image_url" || data.analysis?.input_type === "uploaded_image";
+      translationTools.classList.toggle("hidden", !currentSourceText || isOcrResult);
     }
   }
 
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const translated = await window.api.translateText(
           currentSourceText,
-          translationLanguage.value
+          "en"
         );
         let panel = document.getElementById("translation-result");
         if (!panel) {
@@ -82,11 +82,56 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function translateOcrToEnglish(data) {
+    // Current backends translate before scoring; keep a client-side fallback
+    // for an older server that has not been redeployed yet.
+    if (Object.prototype.hasOwnProperty.call(data, "ocr_detected_language")) {
+      if (data.analysis?.status === "translation_unavailable") {
+        data.ocr_translation_error = data.analysis.warning;
+      }
+      return data;
+    }
+
+    const sourceText = data.ocr?.text?.trim();
+    if (!sourceText) return data;
+
+    showLoading("Checking OCR language and preparing English text...");
+    try {
+      const result = await window.api.translateText(sourceText.slice(0, 5000), "en");
+      data.ocr_detected_language = result.detected_source_language;
+      // English OCR is already in the requested language; don't add a duplicate.
+      if (result.detected_source_language !== "en") {
+        data.ocr_translation = result;
+      }
+    } catch (error) {
+      data.ocr_translation_error = error.message;
+    }
+    return data;
+  }
+
+  function renderOcrEnglishTranslation(data) {
+    if (["low_ocr_confidence", "translation_unavailable"].includes(data.analysis?.status)) return "";
+    if (data.ocr_translation?.translated_text) {
+      const translation = data.ocr_translation;
+      return `<div class="glass-panel"><h3>English translation <span style="color:var(--text-secondary);font-size:.8em;font-weight:400">(${escapeHTML(translation.detected_source_language || "detected language")} → English)</span></h3><div class="article-content" style="white-space:pre-wrap">${escapeHTML(translation.translated_text)}</div></div>`;
+    }
+    if (data.ocr_translation_error) {
+      return `<div class="glass-panel"><h3>English translation unavailable</h3><p>${escapeHTML(data.ocr_translation_error)}</p></div>`;
+    }
+    return "";
+  }
+
   function renderPrediction(data) {
     const analysis = data.analysis || data;
     const credibility = analysis.credibility || {};
     const clickbait = analysis.clickbait || {};
     const ocr = data.ocr || {};
+    if (["low_ocr_confidence", "translation_unavailable"].includes(analysis.status)) {
+      const confidence = Number.isFinite(Number(ocr.average_confidence))
+        ? `OCR confidence: ${Math.round(Number(ocr.average_confidence) * 100)}%. `
+        : "";
+      return `<div class="glass-panel"><h2 class="mb-8">Text analysis unavailable</h2><p style="padding:12px 14px;border-left:3px solid var(--color-blue);border-radius:6px;background:rgba(59,130,246,.08);color:var(--text-secondary)">${escapeHTML(confidence + (analysis.warning || "The text could not be analyzed reliably."))}</p>${ocr.text ? `<h3>Recognized text</h3><div class="ocr-result">${escapeHTML(ocr.text)}</div>` : ""}</div>`;
+    }
     const predictionResult = credibility.prediction || {};
     const prediction = predictionResult.label || credibility.label || "UNCERTAIN";
     const confidenceValue = predictionResult.confidence ?? credibility.confidence;
@@ -98,6 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let html = `
       <div class="glass-panel">
         <h2 class="mb-8">AI Content Analysis</h2>
+        ${analysis.warning ? `<p class="analysis-notice" style="padding:12px 14px;margin-bottom:16px;border-left:3px solid var(--color-blue);border-radius:6px;background:rgba(59,130,246,.08);color:var(--text-secondary)">${escapeHTML(analysis.warning)}</p>` : ""}
         <div class="flex items-center gap-8 flex-wrap">
           <div class="score-circle" style="--score-pct: ${score}%">
             <div class="score-value">
@@ -158,7 +204,12 @@ document.addEventListener("DOMContentLoaded", () => {
     
     html += `<div class="article-meta">`;
     if (data.domain) html += `<span>🌍 ${escapeHTML(data.domain)}</span>`;
-    if (data.author) html += `<span>👤 ${escapeHTML(data.author)}</span>`;
+    if (data.author) {
+      const authors = Array.isArray(data.author)
+        ? data.author.map(author => typeof author === "object" ? author?.name : author).filter(Boolean).join(", ")
+        : data.author;
+      if (authors) html += `<span>👤 ${escapeHTML(authors)}</span>`;
+    }
     if (data.published_date) html += `<span>🕒 ${escapeHTML(data.published_date)}</span>`;
     if (data.word_count) html += `<span>📄 ${data.word_count} words</span>`;
     html += `</div>`;
@@ -177,8 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function escapeHTML(str) {
-    if (!str) return "";
-    return str.replace(/[&<>'"]/g, 
+    if (str === null || str === undefined) return "";
+    return String(str).replace(/[&<>'"]/g,
       tag => ({
       '&': '&amp;',
       '<': '&lt;',
@@ -226,9 +277,9 @@ document.addEventListener("DOMContentLoaded", () => {
       
       showLoading("Running AI analysis...");
       try {
-        const res = await window.api.ocrImageFromUrl(url);
+        const res = await translateOcrToEnglish(await window.api.ocrImageFromUrl(url));
         hideLoading();
-        showResult(renderPrediction(res), res);
+        showResult(renderPrediction(res) + renderOcrEnglishTranslation(res), res);
       } catch (err) {
         showError(err.message);
       }
@@ -275,9 +326,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     showLoading("Uploading and analyzing...");
     try {
-      const res = await window.api.analyzeImage(file);
+      const res = await translateOcrToEnglish(await window.api.analyzeImage(file));
       hideLoading();
-      showResult(renderPrediction(res), res);
+      showResult(renderPrediction(res) + renderOcrEnglishTranslation(res), res);
     } catch (err) {
       showError(err.message);
     }

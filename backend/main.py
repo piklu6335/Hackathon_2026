@@ -4,6 +4,7 @@ from typing import Any
 
 import re
 import requests
+import langid
 
 from fastapi import (
     FastAPI,
@@ -190,7 +191,9 @@ def analyze_text(
 # ============================================================
 
 def analyze_content(
-    text: str
+    text: str,
+    credibility_text: str | None = None,
+    clickbait_text: str | None = None,
 ) -> dict[str, Any]:
 
     text = text.strip()
@@ -210,7 +213,7 @@ def analyze_content(
     try:
 
         credibility = predict_fake_news(
-            text
+            credibility_text or text
         )
 
     except Exception as exc:
@@ -227,7 +230,7 @@ def analyze_content(
     try:
 
         clickbait = predict_clickbait(
-            text
+            clickbait_text or text
         )
 
     except Exception as exc:
@@ -451,18 +454,105 @@ def run_ocr(
         )
 
 
+def analyze_ocr_content(ocr_result: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None, str]:
+    """Translate non-English OCR to English before running English news models."""
+    original_text = (ocr_result.get("text") or "").strip()
+    average_ocr_confidence = float(ocr_result.get("average_confidence") or 0)
+    confidence_threshold = 0.55 if str(ocr_result.get("engine", "")).startswith("EasyOCR") else 0.70
+    if average_ocr_confidence < confidence_threshold:
+        return (
+            {
+                "status": "low_ocr_confidence",
+                "credibility": None,
+                "clickbait": None,
+                "analysis_language": None,
+                "warning": (
+                    f"OCR confidence is low ({average_ocr_confidence:.0%}), so AI scores were skipped. "
+                    "Try a sharper image, crop closer to the text, or use a larger image."
+                ),
+            },
+            None,
+            "und",
+        )
+
+    detected_language, _confidence = langid.classify(original_text)
+    analysis_text = original_text
+    translation = None
+
+    if detected_language != "en":
+        try:
+            analysis_text, detected_language = translate_article(
+                original_text[:MAX_TRANSLATION_CHARACTERS], "en"
+            )
+            translation = {
+                "translated_text": analysis_text,
+                "detected_source_language": detected_language,
+                "target_language": "en",
+                "character_count": min(len(original_text), MAX_TRANSLATION_CHARACTERS),
+            }
+        except Exception as exc:
+            return (
+                {
+                    "status": "translation_unavailable",
+                    "credibility": None,
+                    "clickbait": None,
+                    "input_language": detected_language,
+                    "analysis_language": None,
+                    "warning": (
+                        "This text appears to be non-English, but it could not be "
+                        "translated to English. AI scores were skipped to avoid "
+                        "misleading results. " + str(exc)
+                    ),
+                },
+                None,
+                detected_language,
+            )
+
+    # The credibility classifier was trained on short headlines, so use the
+    # first high-confidence OCR lines for it. Clickbait analysis uses the
+    # complete available English text instead.
+    headline_lines = [
+        str(line.get("text", "")).strip()
+        for line in ocr_result.get("lines", [])
+        if float(line.get("confidence", 0)) >= 0.45 and str(line.get("text", "")).strip()
+    ]
+    headline_candidate = " ".join(headline_lines[:4])[:300]
+    if detected_language != "en" and translation:
+        headline_candidate = analysis_text[:300]
+
+    analysis = analyze_content(
+        analysis_text,
+        credibility_text=headline_candidate or analysis_text,
+        clickbait_text=analysis_text,
+    )
+    warnings = [
+        "AI scores are estimates, not verification. The credibility model was trained mainly on short English news headlines."
+    ]
+    if average_ocr_confidence < 0.60:
+        warnings.append(
+            f"OCR confidence is low ({average_ocr_confidence:.0%}); check the recognized text before relying on the scores."
+        )
+    analysis.update({
+        "input_language": detected_language,
+        "analysis_language": "en",
+        "warning": " ".join(warnings),
+    })
+    return analysis, translation, detected_language
+
 # ============================================================
 # OCR USING IMAGE URL + AI ANALYSIS
 # ============================================================
 
-@app.post("/api/ocr-url")
+@app.api_route("/api/ocr-url", methods=["GET", "POST"])
 def ocr_using_url(
-    request: OCRURLRequest,
+    request: OCRURLRequest | None = None,
+    image_url: HttpUrl | None = None,
 ):
 
-    image_url = str(
-        request.image_url
-    )
+    submitted_url = image_url or (request.image_url if request else None)
+    if submitted_url is None:
+        raise HTTPException(status_code=422, detail="Provide an image_url to analyze.")
+    image_url = str(submitted_url)
 
     # --------------------------------------------------------
     # Download image
@@ -540,9 +630,7 @@ def ocr_using_url(
     # Run WELFake + Clickbait4
     # --------------------------------------------------------
 
-    analysis = analyze_content(
-        extracted_text
-    )
+    analysis, ocr_translation, detected_language = analyze_ocr_content(ocr_result)
 
     # --------------------------------------------------------
     # Final response
@@ -567,6 +655,8 @@ def ocr_using_url(
 
             "text": extracted_text,
 
+            "engine": ocr_result.get("engine"),
+
             "lines": ocr_result.get(
                 "lines",
                 [],
@@ -578,6 +668,10 @@ def ocr_using_url(
                 )
             ),
         },
+
+        "ocr_detected_language": detected_language,
+
+        "ocr_translation": ocr_translation,
 
         "analysis": {
 
@@ -685,9 +779,7 @@ async def analyze_image(
     # Run WELFake + Clickbait4
     # --------------------------------------------------------
 
-    analysis = analyze_content(
-        extracted_text
-    )
+    analysis, ocr_translation, detected_language = analyze_ocr_content(ocr_result)
 
     # --------------------------------------------------------
     # Final response
@@ -712,6 +804,8 @@ async def analyze_image(
 
             "text": extracted_text,
 
+            "engine": ocr_result.get("engine"),
+
             "lines": ocr_result.get(
                 "lines",
                 [],
@@ -723,6 +817,10 @@ async def analyze_image(
                 )
             ),
         },
+
+        "ocr_detected_language": detected_language,
+
+        "ocr_translation": ocr_translation,
 
         "analysis": {
 

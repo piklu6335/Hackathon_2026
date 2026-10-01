@@ -1,6 +1,13 @@
 // js/api.js
-// The website and API share an origin in local and Render deployments.
-const API_BASE_URL = "";
+// Render serves the frontend and API from one origin. VS Code Live Server
+// serves the frontend on :5500, so point local browser requests at FastAPI :8000.
+const API_BASE_URL = (() => {
+  const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const separateLocalFrontend = localHost && window.location.port !== "8000";
+  return separateLocalFrontend
+    ? `${window.location.protocol}//${window.location.hostname}:8000`
+    : "";
+})();
 
 const api = {
   async checkBackend() {
@@ -37,11 +44,17 @@ const api = {
   },
 
   async ocrImageFromUrl(url) {
-    const res = await fetch(`${API_BASE_URL}/api/ocr-url`, {
+    let res = await fetch(`${API_BASE_URL}/api/ocr-url`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ image_url: url })
     });
+    // Older deployments may expose this endpoint as GET only. Retry using
+    // the query-string form if the server rejects POST with 405.
+    if (res.status === 405) {
+      const query = new URLSearchParams({ image_url: url });
+      res = await fetch(`${API_BASE_URL}/api/ocr-url?${query.toString()}`);
+    }
     if (!res.ok) throw new Error(await responseError(res, "Failed to process image URL"));
     return res.json();
   },
@@ -59,10 +72,20 @@ const api = {
 
 async function responseError(response, fallback) {
   try {
-    const payload = await response.json();
-    return payload.detail || fallback;
+    const body = await response.text();
+    if (!body) return `${fallback} (HTTP ${response.status})`;
+    try {
+      const payload = JSON.parse(body);
+      return payload.detail || `${fallback} (HTTP ${response.status})`;
+    } catch (_) {
+      // Render/proxy errors can be HTML instead of the API's JSON error body.
+      const message = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      return message
+        ? `${fallback} (HTTP ${response.status}): ${message.slice(0, 240)}`
+        : `${fallback} (HTTP ${response.status})`;
+    }
   } catch (_) {
-    return fallback;
+    return `${fallback} (HTTP ${response.status})`;
   }
 }
 

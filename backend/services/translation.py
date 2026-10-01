@@ -58,20 +58,28 @@ def translate_article(text: str, target_language: str) -> tuple[str, str]:
         }
 
         direct_available = _install_pair(source_language, target_language, installed_pairs)
+        pivot_available = False
         if not direct_available and source_language != "en" and target_language != "en":
-            # Argos can pivot through English when direct language-pair models
-            # are unavailable, as LibreTranslate does.
+            # Install both legs of the route and actually translate through English.
             source_to_english = _install_pair(source_language, "en", installed_pairs)
             english_to_target = _install_pair("en", target_language, installed_pairs)
-            direct_available = source_to_english and english_to_target
+            pivot_available = source_to_english and english_to_target
 
-        if not direct_available:
+        if not direct_available and not pivot_available:
             raise LanguagePairUnavailable(
                 f"No Argos model route is available from {source_language} to {target_language}."
             )
 
-        translated_text = argostranslate.translate.translate(
-            text, source_language, target_language
-        )
+        if direct_available:
+            translated_text = argostranslate.translate.translate(
+                text, source_language, target_language
+            )
+        else:
+            english_text = argostranslate.translate.translate(
+                text, source_language, "en"
+            )
+            translated_text = argostranslate.translate.translate(
+                english_text, "en", target_language
+            )
 
     return translated_text, source_language

@@ -346,39 +346,22 @@ def fetch_with_browser(url: str) -> tuple[str, str]:
 
     with sync_playwright() as p:
 
-        browser = p.chromium.launch(
-            headless=True
-        )
+        browser = p.chromium.launch(headless=True)
+        try:
+            context = browser.new_context(
+                user_agent=USER_AGENT,
+                locale="en-US",
+                viewport={"width": 1366, "height": 768},
+                extra_http_headers={"Accept-Language": "en-US,en;q=0.9"},
+            )
+            page = context.new_page()
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
 
-        context = browser.new_context(
-            user_agent=USER_AGENT,
-            locale="en-US",
-            viewport={
-                "width": 1366,
-                "height": 768,
-            },
-            extra_http_headers={
-                "Accept-Language": "en-US,en;q=0.9",
-            },
-        )
-
-        page = context.new_page()
-
-        page.goto(
-            url,
-            wait_until="domcontentloaded",
-            timeout=30000,
-        )
-
-        # Give JS-rendered pages a moment to populate
-        page.wait_for_timeout(2000)
-
-        html = page.content()
-        final_url = page.url
-
-        browser.close()
-
-        return html, final_url
+            # Give JavaScript-rendered pages a moment to populate.
+            page.wait_for_timeout(2000)
+            return page.content(), page.url
+        finally:
+            browser.close()
 
 
 def scrape_article(url: str) -> dict:

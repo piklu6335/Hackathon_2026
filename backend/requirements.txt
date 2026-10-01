@@ -17,3 +17,4 @@ sentencepiece
 protobuf
 argostranslate
 langid
+easyocr
