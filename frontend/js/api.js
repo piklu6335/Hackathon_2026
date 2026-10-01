@@ -44,6 +44,16 @@ const api = {
     });
     if (!res.ok) throw new Error(await responseError(res, "Failed to process image URL"));
     return res.json();
+  },
+
+  async translateText(text, targetLanguage) {
+    const res = await fetch(`${API_BASE_URL}/api/translate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, target_language: targetLanguage })
+    });
+    if (!res.ok) throw new Error(await responseError(res, "Translation failed"));
+    return res.json();
   }
 };
 

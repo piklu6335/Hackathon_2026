@@ -15,6 +15,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from html import unescape
+from dotenv import load_dotenv
 
 from pydantic import BaseModel, HttpUrl
 
@@ -39,6 +42,7 @@ app = FastAPI(
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
+load_dotenv(PROJECT_ROOT / "backend" / ".env")
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|chrome-extension://[a-p]{32}",
@@ -67,6 +71,11 @@ class ExtensionAnalyzeRequest(BaseModel):
     domain: str = ""
 
 
+class TranslateRequest(BaseModel):
+    text: str
+    target_language: str
+
+
 # ============================================================
 # Configuration
 # ============================================================
@@ -79,6 +88,11 @@ ALLOWED_IMAGE_TYPES = {
 }
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_TRANSLATION_CHARACTERS = 5000
+TRANSLATION_LANGUAGES = {
+    "ar", "bn", "de", "en", "es", "fr", "hi", "it", "ja", "ko",
+    "mr", "pa", "pt", "ru", "ta", "te", "ur", "zh-CN",
+}
 
 
 # ============================================================
@@ -96,7 +110,55 @@ def root():
             "article_scraping",
             "local_ocr",
             "fake_news_analysis",
+            "google_cloud_translation",
         ],
+    }
+
+
+@app.post("/api/translate")
+def translate_text(request: TranslateRequest):
+    """Translate a short article excerpt through Google Cloud Translation v2."""
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Text to translate is required.")
+    if len(text) > MAX_TRANSLATION_CHARACTERS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Translate up to {MAX_TRANSLATION_CHARACTERS:,} characters at a time.",
+        )
+    if request.target_language not in TRANSLATION_LANGUAGES:
+        raise HTTPException(status_code=422, detail="Choose a supported target language.")
+
+    api_key = os.getenv("GOOGLE_TRANSLATE_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Translation is not configured. Set GOOGLE_TRANSLATE_API_KEY on the backend.",
+        )
+
+    try:
+        response = requests.post(
+            "https://translation.googleapis.com/language/translate/v2",
+            params={"key": api_key},
+            json={"q": text, "target": request.target_language, "format": "text"},
+            timeout=20,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        translation = payload["data"]["translations"][0]
+    except requests.Timeout as exc:
+        raise HTTPException(status_code=504, detail="Google Translation timed out.") from exc
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail="Google Translation could not process the request.") from exc
+    except (KeyError, IndexError, TypeError, ValueError) as exc:
+        raise HTTPException(status_code=502, detail="Google Translation returned an unexpected response.") from exc
+
+    return {
+        "success": True,
+        "translated_text": unescape(translation.get("translatedText", "")),
+        "detected_source_language": translation.get("detectedSourceLanguage"),
+        "target_language": request.target_language,
+        "character_count": len(text),
     }
 
 

@@ -26,10 +26,60 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const resultContainer = document.getElementById("result-container");
+  const translationTools = document.getElementById("translation-tools");
+  const translateButton = document.getElementById("translate-button");
+  const translationLanguage = document.getElementById("translation-language");
+  let currentSourceText = "";
   
   function resetAnalysis() {
     resultContainer.innerHTML = "";
     resultContainer.classList.remove("hidden");
+  }
+
+  function showResult(html, data) {
+    resetAnalysis();
+    resultContainer.innerHTML = html;
+    currentSourceText = (
+      data.article?.content ||
+      data.article?.article_text ||
+      data.ocr?.text ||
+      data.analysis?.input_text ||
+      data.analysis?.input?.text ||
+      ""
+    ).trim().slice(0, 5000);
+    if (translationTools) {
+      translationTools.classList.toggle("hidden", !currentSourceText);
+    }
+  }
+
+  if (translateButton) {
+    translateButton.addEventListener("click", async () => {
+      if (!currentSourceText) return;
+      translateButton.disabled = true;
+      const originalLabel = translateButton.textContent;
+      translateButton.textContent = "Translating…";
+      try {
+        const translated = await window.api.translateText(
+          currentSourceText,
+          translationLanguage.value
+        );
+        let panel = document.getElementById("translation-result");
+        if (!panel) {
+          panel = document.createElement("section");
+          panel.id = "translation-result";
+          panel.className = "glass-panel";
+          panel.style.marginTop = "20px";
+          resultContainer.appendChild(panel);
+        }
+        panel.innerHTML = `<h3>Translated article <span style="color:var(--text-secondary);font-size:.8em;font-weight:400">(${escapeHTML(translated.detected_source_language || "auto-detected")} → ${escapeHTML(translated.target_language)})</span></h3><div class="article-content" id="translated-text" style="white-space:pre-wrap"></div>`;
+        panel.querySelector("#translated-text").textContent = translated.translated_text;
+      } catch (error) {
+        showError(error.message);
+      } finally {
+        translateButton.disabled = false;
+        translateButton.textContent = originalLabel;
+      }
+    });
   }
 
   function renderPrediction(data) {
@@ -117,8 +167,9 @@ document.addEventListener("DOMContentLoaded", () => {
       html += `<div class="article-desc">${escapeHTML(data.description)}</div>`;
     }
 
-    if (data.content) {
-      html += `<h3>Article Content</h3><div class="article-content">${escapeHTML(data.content)}</div>`;
+    const articleText = data.article_text || data.content;
+    if (articleText) {
+      html += `<h3>Article Content</h3><div class="article-content">${escapeHTML(articleText)}</div>`;
     }
     
     html += `</div>`;
@@ -159,8 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
       const res = await window.api.scrapeArticle(url);
         hideLoading();
-        resetAnalysis();
-      resultContainer.innerHTML = renderArticle(res.article || {}) + renderPrediction(res);
+        showResult(renderArticle(res.article || {}) + renderPrediction(res), res);
       } catch (err) {
         showError(err.message);
       }
@@ -178,8 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const res = await window.api.ocrImageFromUrl(url);
         hideLoading();
-        resetAnalysis();
-        resultContainer.innerHTML = renderPrediction(res);
+        showResult(renderPrediction(res), res);
       } catch (err) {
         showError(err.message);
       }
@@ -228,8 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const res = await window.api.analyzeImage(file);
       hideLoading();
-      resetAnalysis();
-      resultContainer.innerHTML = renderPrediction(res);
+      showResult(renderPrediction(res), res);
     } catch (err) {
       showError(err.message);
     }
