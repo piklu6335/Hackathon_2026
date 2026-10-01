@@ -44,8 +44,17 @@ app = FastAPI(
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 load_dotenv(PROJECT_ROOT / "backend" / ".env")
+frontend_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "https://piklu6335.github.io",
+    ).split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=frontend_origins,
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|chrome-extension://[a-p]{32}",
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],

@@ -26,6 +26,8 @@ services:
         value: /var/data/easyocr
       - key: TORCH_NUM_THREADS
         value: "1"
+      - key: FRONTEND_ORIGINS
+        value: https://piklu6335.github.io
     disk:
       name: argos-models
       mountPath: /var/data

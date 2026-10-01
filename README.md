@@ -28,4 +28,24 @@ The schema is ready for account sessions and analysis history, but authenticatio
 NewsCred translates extracted article/OCR text in the FastAPI backend using the Argos Translate Python module, which is the open-source engine used by LibreTranslate. It does not call a translation API and needs no API key. The backend detects the source language, downloads only the required model pair (or an English pivot pair) on first use, then runs translation locally. Translation requests are capped at 5,000 characters.
 
 Models are stored in Argos's local package directory. Render mounts a 5 GB persistent disk for those model files, so downloaded models survive redeploys. The disk adds about $1.25/month at Render's current $0.25/GB rate; there is no separate translation service or API charge. Argos Translate is open-source and supports local Python translation: https://github.com/argosopentech/argos-translate/.
-#
+
+## Deploy the static website to GitHub Pages
+
+The Pages workflow publishes `frontend/` as a static site. The FastAPI API and
+MySQL database remain on Render; GitHub Pages cannot run Python services or
+host a database.
+
+1. In the GitHub repository, open **Settings → Secrets and variables → Actions → Variables**.
+2. Add the repository variable `NEWSCRED_API_BASE_URL` with the public HTTPS URL
+   of the Render web service (for example, `https://your-service.onrender.com`,
+   without a trailing slash).
+3. Open **Settings → Pages** and set the build and deployment source to **GitHub Actions**.
+4. Push the changes to `main`, or manually run **Deploy website to GitHub Pages**
+   from the Actions tab. The site will be published at
+   `https://piklu6335.github.io/Hackathon_2026/`.
+
+The Render service must allow the Pages origin in `FRONTEND_ORIGINS`. The
+Render blueprint includes `https://piklu6335.github.io`; add any custom domain
+as a comma-separated origin in that environment variable. The API URL is public
+configuration, not a secret. Never put database credentials in frontend files.
+

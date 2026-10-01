@@ -1,0 +1,50 @@
+name: Deploy website to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Prepare static site
+        env:
+          NEWSCRED_API_BASE_URL: ${{ vars.NEWSCRED_API_BASE_URL }}
+        run: |
+          if [ -z "$NEWSCRED_API_BASE_URL" ]; then
+            echo "Set the repository Actions variable NEWSCRED_API_BASE_URL to your Render service URL first." >&2
+            exit 1
+          fi
+          mkdir -p _site
+          cp -R frontend/. _site/
+          node -e 'const fs = require("fs"); const base = process.env.NEWSCRED_API_BASE_URL; if (!/^https:\/\//i.test(base)) throw new Error("NEWSCRED_API_BASE_URL must be an https URL"); fs.writeFileSync("_site/js/runtime-config.js", `window.NEWSCRED_API_BASE_URL = ${JSON.stringify(base.replace(/\/+$/, ""))};\n`);'
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
