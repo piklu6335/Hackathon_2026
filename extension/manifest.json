@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "NewsCred",
+  "version": "0.1.0",
+  "description": "Analyze the credibility signals of the news article you're reading.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://localhost:8000/*", "https://*.onrender.com/*"],
+  "action": {
+    "default_title": "NewsCred analysis",
+    "default_popup": "popup.html"
+  },
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{
+    "matches": ["http://*/*", "https://*/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
+}

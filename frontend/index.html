@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NewsCred | AI-Powered News Intelligence</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bg-effects"></div>
+  <div class="particles"></div>
+  <div class="light-beam"></div>
+
+  <!-- Shared Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="#landing" class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500" style="color: var(--color-blue);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        News<span style="color: var(--color-blue)">Cred</span>
+      </a>
+      <div class="nav-links">
+        <a href="#landing" class="active">Home</a>
+        <a href="/analyze">Analyze</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="/login" class="btn btn-secondary" style="padding: 8px 16px; margin-left: 16px;">Log In</a>
+        <a href="/signup" class="btn btn-primary" style="padding: 8px 16px;">Sign Up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- LANDING VIEW -->
+  <div id="view-landing" class="view">
+    <main>
+      <section class="hero container">
+        <div class="badge mb-8">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          AI-POWERED NEWS INTELLIGENCE
+        </div>
+        
+        <h1>Know What to Trust.<br><span class="gradient-text">Before You Share.</span></h1>
+        
+        <p>Analyze articles, screenshots and viral claims using AI-powered extraction and credibility analysis.</p>
+        
+        <div class="flex items-center justify-center gap-6">
+          <a href="/analyze" class="btn btn-primary" style="padding: 14px 36px; font-size: 1rem;">Analyze News</a>
+          <a href="#how-it-works" class="btn btn-secondary" style="padding: 14px 36px; font-size: 1rem;">Explore How It Works</a>
+        </div>
+
+        <div class="dashboard-preview glass-card" style="margin-top: 100px;">
+          <div class="db-header">
+            <div class="db-dot r"></div>
+            <div class="db-dot y"></div>
+            <div class="db-dot g"></div>
+            <span class="db-title">NewsCred Intelligence Preview</span>
+          </div>
+          <div class="db-body">
+            <div class="db-stats-row">
+              <div class="db-stat-card">
+                <span class="db-stat-lbl">Credibility</span>
+                <span class="db-stat-val text-blue-400">68 <span style="font-size:1rem;color:var(--text-secondary)">/100</span></span>
+              </div>
+              <div class="db-stat-card">
+                <span class="db-stat-lbl">OCR Confidence</span>
+                <span class="db-stat-val text-green-400">94%</span>
+              </div>
+              <div class="db-stat-card">
+                <span class="db-stat-lbl">Claims Detected</span>
+                <span class="db-stat-val text-yellow-400">4</span>
+              </div>
+              <div class="db-stat-card">
+                <span class="db-stat-lbl">Source Signal</span>
+                <span class="db-stat-val text-blue-400">81</span>
+              </div>
+            </div>
+
+            <div class="glass-panel" style="grid-column: 1;">
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 24px; text-transform:uppercase; letter-spacing:0.05em;">Article Analysis</div>
+              <h3 style="margin-bottom:8px; font-size:1.1rem; color:white;">Unprecedented Solar Flare Expected Tomorrow</h3>
+              <div style="font-size:0.875rem; color:var(--text-secondary); margin-bottom:24px;">By John Doe | Science Daily | Oct 2026</div>
+              <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.8;">
+                Scientists have <span style="background:rgba(239, 68, 68, 0.2); color:white; padding:2px 4px; border-radius:4px;">warned of a massive solar flare</span> that could disrupt global internet access for weeks. Sources claim the event will begin...
+              </p>
+            </div>
+
+            <div class="glass-panel flex-col justify-between" style="grid-column: 2;">
+              <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 24px; text-transform:uppercase; letter-spacing:0.05em;">AI Analysis</div>
+              
+              <div class="flex items-center gap-8 mb-8">
+                <div class="score-circle" style="--score-pct: 87%; width:100px; height:100px;">
+                  <div class="score-value">
+                    <div class="num" style="font-size:1.8rem;">87<span style="font-size:1rem;">%</span></div>
+                    <div class="max">CONFIDENCE</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="status-badge status-FAKE" style="width: auto; padding: 4px 12px; font-size: 0.875rem; margin-bottom: 8px;">FAKE CONTENT</div>
+                  <div style="font-size: 1.1rem; font-weight: 500;">High probability of fabrication</div>
+                  <div style="color: var(--text-secondary); font-size: 0.8rem; margin-top:4px;">Model: WELFake Neural Net</div>
+                </div>
+              </div>
+
+              <div class="factor-list" style="margin-top:0;">
+                <div class="factor-item" style="padding:10px 16px;">
+                  <span>Language Sensationalism</span>
+                  <span style="color:var(--color-red)">High</span>
+                </div>
+                <div class="factor-item" style="padding:10px 16px;">
+                  <span>Domain Reputation</span>
+                  <span style="color:var(--color-yellow)">Unknown</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="section-padding" style="background: rgba(3,7,18,0.5); border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <div class="container text-center">
+          <h2 class="mb-4">How the Engine Works</h2>
+          <p class="mb-12" style="color: var(--text-secondary); font-size: 1.125rem; max-width: 600px; margin: 0 auto;">A transparent pipeline from raw input to credibility analysis.</p>
+
+          <div class="grid-3" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+            <div class="glass-card" style="padding: 24px; text-align: center;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-blue); margin-bottom: 8px;">1</div>
+              <h3 style="font-size: 1rem; margin-bottom: 8px;">INPUT</h3>
+              <p style="font-size: 0.875rem; color: var(--text-secondary);">Article URL or Screenshot</p>
+            </div>
+            <div class="glass-card" style="padding: 24px; text-align: center;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-blue); margin-bottom: 8px;">2</div>
+              <h3 style="font-size: 1rem; margin-bottom: 8px;">EXTRACTION</h3>
+              <p style="font-size: 0.875rem; color: var(--text-secondary);">Article scraping / OCR</p>
+            </div>
+            <div class="glass-card" style="padding: 24px; text-align: center;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-blue); margin-bottom: 8px;">3</div>
+              <h3 style="font-size: 1rem; margin-bottom: 8px;">AI ANALYSIS</h3>
+              <p style="font-size: 0.875rem; color: var(--text-secondary);">Machine learning analysis</p>
+            </div>
+            <div class="glass-card" style="padding: 24px; text-align: center;">
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-blue); margin-bottom: 8px;">4</div>
+              <h3 style="font-size: 1rem; margin-bottom: 8px;">EVIDENCE</h3>
+              <p style="font-size: 0.875rem; color: var(--text-secondary);">Claim and source verification</p>
+            </div>
+            <div class="glass-card" style="padding: 24px; text-align: center; border-color: rgba(59, 130, 246, 0.4);">
+              <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-blue); margin-bottom: 8px;">5</div>
+              <h3 style="font-size: 1rem; margin-bottom: 8px;">RESULT</h3>
+              <p style="font-size: 0.875rem; color: var(--text-secondary);">Transparent credibility assessment</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section-padding container">
+        <div class="text-center mb-12">
+          <h2 class="mb-4">From headline to evidence.</h2>
+          <p style="color: var(--text-secondary); font-size: 1.125rem; max-width: 600px; margin: 0 auto;">NewsCred transforms scattered article and screenshot content into structured, inspectable intelligence.</p>
+        </div>
+
+        <div class="grid-3">
+          <div class="glass-card" style="padding: 32px;">
+            <h3 class="mb-4">Multi-Input Analysis</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Analyze articles, screenshots and image URLs through a single unified interface.</p>
+          </div>
+          <div class="glass-card" style="padding: 32px;">
+            <h3 class="mb-4">Local OCR</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Extract text locally without relying on external cloud vision APIs for processing.</p>
+          </div>
+          <div class="glass-card" style="padding: 32px;">
+            <h3 class="mb-4">WELFake-Based AI</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Classify article content using our trained model for reliable fake/real detection.</p>
+          </div>
+          <div class="glass-card" style="padding: 32px;">
+            <h3 class="mb-4">Source Intelligence</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Analyze publisher and domain metadata to build a comprehensive trust profile. (Coming Soon)</p>
+          </div>
+          <div class="glass-card" style="padding: 32px;">
+            <h3 class="mb-4">Transparent Results</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Show the information and factors behind the result to avoid black-box conclusions.</p>
+          </div>
+          <div class="glass-card" style="padding: 32px;">
+            <h3 class="mb-4">Fast Analysis</h3>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">Built for rapid interactive investigation during critical fact-checking scenarios.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer style="border-top: 1px solid rgba(255,255,255,0.05); padding: 48px 0; margin-top: 64px;">
+      <div class="container text-center">
+        <div class="brand justify-center mb-4">
+          News<span style="color: var(--color-blue)">Cred</span>
+        </div>
+        <p style="color: rgba(255,255,255,0.2); font-size: 0.75rem;">Built for Hackathon 2026. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- LOGIN VIEW -->
+  <div id="view-login" class="view hidden">
+    <main class="container" style="display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 80px);">
+      <div class="glass-card" style="width: 100%; max-width: 400px; padding: 40px; margin-top: -80px;">
+        <h2 style="text-align: center; margin-bottom: 24px;">Log In</h2>
+        <form class="flex-col gap-4">
+          <div class="flex-col gap-2">
+            <label style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">Email</label>
+            <input type="email" class="input-field" placeholder="Enter your email" required style="padding: 12px 16px;">
+          </div>
+          <div class="flex-col gap-2">
+            <label style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">Password</label>
+            <input type="password" class="input-field" placeholder="Enter your password" required style="padding: 12px 16px;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px; padding: 14px;">Log In</button>
+        </form>
+        <p style="text-align: center; margin-top: 24px; font-size: 0.875rem; color: var(--text-secondary);">
+          Don't have an account? <a href="/signup" style="color: var(--color-blue); text-decoration: none; font-weight: 600;">Sign up</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <!-- SIGNUP VIEW -->
+  <div id="view-signup" class="view hidden">
+    <main class="container" style="display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 80px);">
+      <div class="glass-card" style="width: 100%; max-width: 400px; padding: 40px; margin-top: -80px;">
+        <h2 style="text-align: center; margin-bottom: 24px;">Create Account</h2>
+        <form class="flex-col gap-4">
+          <div class="flex-col gap-2">
+            <label style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">Email</label>
+            <input type="email" class="input-field" placeholder="Enter your email" required style="padding: 12px 16px;">
+          </div>
+          <div class="flex-col gap-2">
+            <label style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">Password</label>
+            <input type="password" class="input-field" placeholder="Create a password" required style="padding: 12px 16px;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 16px; padding: 14px;">Sign Up</button>
+        </form>
+        <p style="text-align: center; margin-top: 24px; font-size: 0.875rem; color: var(--text-secondary);">
+          Already have an account? <a href="/login" style="color: var(--color-blue); text-decoration: none; font-weight: 600;">Log in</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ANALYZE VIEW -->
+  <div id="view-analyze" class="view hidden">
+    <main style="padding-top: 120px; padding-bottom: 80px; min-height: 100vh;">
+      <div class="container" style="max-width: 900px;">
+        <div class="text-center mb-8">
+          <h1 style="font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 16px;">Analyze a News Story</h1>
+          <p style="color: var(--text-secondary); font-size: 1.125rem;">Paste an article URL or analyze a screenshot to inspect its content.</p>
+        </div>
+
+        <div class="glass-card" style="padding: 16px; margin-bottom: 32px;">
+          <div class="tabs">
+            <button class="tab-btn active" data-target="tab-url">Article URL</button>
+            <button class="tab-btn" data-target="tab-upload">Image Upload</button>
+            <button class="tab-btn" data-target="tab-img-url">Image URL</button>
+          </div>
+
+          <div id="tab-url" class="tab-content active" style="padding: 16px;">
+            <form id="url-form">
+              <div class="input-group">
+                <input type="url" id="article-url" class="input-field" placeholder="Paste article URL (e.g. https://news.com/...)" required>
+                <button type="submit" class="btn btn-primary">Analyze Article</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="tab-upload" class="tab-content" style="padding: 16px;">
+            <div id="upload-zone" class="upload-zone">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary); margin: 0 auto 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              <h4>Drop a screenshot here</h4>
+              <p>or click to browse (PNG, JPG, WEBP max 10MB)</p>
+              <input type="file" id="file-upload" class="hidden" accept="image/png, image/jpeg, image/webp">
+            </div>
+          </div>
+
+          <div id="tab-img-url" class="tab-content" style="padding: 16px;">
+            <form id="img-url-form">
+              <div class="input-group">
+                <input type="url" id="image-url" class="input-field" placeholder="Paste public image URL..." required>
+                <button type="submit" class="btn btn-primary">Analyze Image</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div id="result-container" class="hidden"></div>
+      </div>
+    </main>
+    <footer style="border-top: 1px solid rgba(255,255,255,0.05); padding: 48px 0;">
+      <div class="container text-center">
+        <div class="brand justify-center mb-4">
+          News<span style="color: var(--color-blue)">Cred</span>
+        </div>
+        <p style="color: rgba(255,255,255,0.2); font-size: 0.75rem;">Built for Hackathon 2026. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <div id="loader" class="loader-overlay">
+    <div class="spinner"></div>
+    <div id="loader-text" class="loader-text">Loading...</div>
+  </div>
+
+  <!-- JS -->
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/analyze.js"></script>
+</body>
+</html>

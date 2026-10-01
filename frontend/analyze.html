@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyze | NewsCred</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="bg-effects"></div>
+  <div class="light-beam" style="height: 50vh;"></div>
+
+  <nav class="navbar scrolled">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-blue);"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        News<span style="color: var(--color-blue)">Cred</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="analyze.html" class="active">Analyze</a>
+      </div>
+    </div>
+  </nav>
+
+  <main style="padding-top: 120px; padding-bottom: 80px; min-height: 100vh;">
+    <div class="container" style="max-width: 900px;">
+      <div class="text-center mb-8">
+        <h1 style="font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 16px;">Analyze a News Story</h1>
+        <p style="color: var(--text-secondary); font-size: 1.125rem;">Paste an article URL or analyze a screenshot to inspect its content.</p>
+      </div>
+
+      <div class="glass-card" style="padding: 16px; margin-bottom: 32px;">
+        <div class="tabs">
+          <button class="tab-btn active" data-target="tab-url">Article URL</button>
+          <button class="tab-btn" data-target="tab-upload">Image Upload</button>
+          <button class="tab-btn" data-target="tab-img-url">Image URL</button>
+        </div>
+
+        <div id="tab-url" class="tab-content active" style="padding: 16px;">
+          <form id="url-form">
+            <div class="input-group">
+              <input type="url" id="article-url" class="input-field" placeholder="Paste article URL (e.g. https://news.com/...)" required>
+              <button type="submit" class="btn btn-primary">Analyze Article</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="tab-upload" class="tab-content" style="padding: 16px;">
+          <div id="upload-zone" class="upload-zone">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary); margin: 0 auto 16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <h4>Drop a screenshot here</h4>
+            <p>or click to browse (PNG, JPG, WEBP max 10MB)</p>
+            <input type="file" id="file-upload" class="hidden" accept="image/png, image/jpeg, image/webp">
+          </div>
+        </div>
+
+        <div id="tab-img-url" class="tab-content" style="padding: 16px;">
+          <form id="img-url-form">
+            <div class="input-group">
+              <input type="url" id="image-url" class="input-field" placeholder="Paste public image URL..." required>
+              <button type="submit" class="btn btn-primary">Analyze Image</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="result-container" class="hidden"></div>
+    </div>
+  </main>
+
+  <div id="loader" class="loader-overlay">
+    <div class="spinner"></div>
+    <div id="loader-text" class="loader-text">Loading...</div>
+  </div>
+
+  <footer style="border-top: 1px solid rgba(255,255,255,0.05); padding: 48px 0;">
+    <div class="container text-center">
+      <div class="brand justify-center mb-4">
+        News<span style="color: var(--color-blue)">Cred</span>
+      </div>
+      <p style="color: rgba(255,255,255,0.2); font-size: 0.75rem;">Built for Hackathon 2026. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/analyze.js"></script>
+</body>
+</html>

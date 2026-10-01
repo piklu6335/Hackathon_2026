@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+requests
+trafilatura
+beautifulsoup4
+pydantic
+lxml_html_clean
+playwright
+rapidocr
+onnxruntime
+python-dotenv
+python-multipart
+torch
+transformers
+tiktoken
+sentencepiece
+protobuf
