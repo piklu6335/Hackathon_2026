@@ -1,9 +1,7 @@
 // js/api.js
-// Render can serve both frontend and API. For GitHub Pages, js/runtime-config.js
-// supplies the separate Render API origin. VS Code Live Server uses :8000.
+// Render serves the frontend and API from one origin. VS Code Live Server
+// serves the frontend on :5500, so point local browser requests at FastAPI :8000.
 const API_BASE_URL = (() => {
-  const deployedApi = window.NEWSCRED_API_BASE_URL;
-  if (deployedApi) return deployedApi.replace(/\/+$/, "");
   const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
   const separateLocalFrontend = localHost && window.location.port !== "8000";
   return separateLocalFrontend
